@@ -2,6 +2,7 @@ import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, 
 import React, { useEffect, useState } from 'react'
 import * as LocalAuthentication from 'expo-local-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import { useRefresh } from '@/Context/RefreshContext';
 import { colors } from '@/css/colorsIndex';
 import { RightGrayAngle } from '@/assets/svg/RightGrayAngle';
@@ -27,6 +28,8 @@ const Profile: React.FC<ProfileProps> = ({ navigation }) => {
 	const firstLetter = typeof profileName?.name === 'string' && profileName?.name?.trim()
 		? profileName?.name?.trim()[0].toUpperCase()
 		: '-';
+
+	const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -224,12 +227,21 @@ const Profile: React.FC<ProfileProps> = ({ navigation }) => {
 									</TouchableOpacity>
 								</View>
 							)}
+
+							{/* App Version Row */}
+							<View style={styles.passwordsContainerMain}>
+								<Text style={styles.passwordLabelText}>App Version:</Text>
+								<Text style={styles.passwordDotsText}>v{appVersion}</Text>
+							</View>
 						</View>
 					</View>
 
 					<TouchableOpacity style={styles.Setting_Edit_container_List} onPress={handleSignOut}>
 						<Text style={styles.Setting_Edit_text_list}>Sign out</Text>
 					</TouchableOpacity>
+
+					{/* Version Footer */}
+					<Text style={styles.footerVersionText}>Version {appVersion}</Text>
 				</ScrollView>
 			</View>
 		</View>
@@ -413,5 +425,12 @@ const styles = StyleSheet.create({
 	},
 	toggleThumbActive: {
 		alignSelf: 'flex-end',
+	},
+	footerVersionText: {
+		fontFamily: 'Inter',
+		fontSize: 12,
+		color: colors.gray400,
+		textAlign: 'center',
+		marginTop: 24,
 	},
 })

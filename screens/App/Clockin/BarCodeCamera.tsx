@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Linking } from 'react-native';
+import { Alert, Linking, Platform, TextInput } from 'react-native';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Camera, CameraView } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,28 +17,54 @@ const BarCodeCamera = ({ navigation }: any) => {
 	const [token, setToken] = useState<string | null>(null);
 	const [userId, setUserId] = useState<string | any>(null);
 	const [hasClockedIn, setHasClockedIn] = useState(false);
+	const [manualToken, setManualToken] = useState("");
 	const [input, setInput] = useState({
 		token: "",
 		userId: "",
 	});
 	const dispatch = useAppDispatch();
+
+	const showAlert = (title: string, message: string, buttons?: any[]) => {
+		if (Platform.OS === 'web') {
+			alert(`${title ? title + ': ' : ''}${message}`);
+			if (buttons && buttons.length > 0 && buttons[0].onPress) {
+				buttons[0].onPress();
+			}
+		} else {
+			Alert.alert(title, message, buttons);
+		}
+	};
+
 	useEffect(() => {
 		const fetchUser = async () => {
 			const user: any = await getUserInfo();
 			if (user) {
-				setUserId(user?.data?.user?.id)
+				const uId = user?.data?.user?.id;
+				const userJwtToken = user?.token;
+				setUserId(uId);
+				
+				if (uId && userJwtToken) {
+					try {
+						// Fetch attendance status
+						const response = await fetch(`${baseUrl}/api/v1/attendance/${uId}`, {
+							headers: { Authorization: `Bearer ${userJwtToken}` },
+						});
+						const status = await response.json();
+						setHasClockedIn(status?.hasClockedIn);
+					} catch (err) {
+						console.error("Error fetching attendance status:", err);
+					}
+				}
 			}
 		};
 
 		fetchUser();
 	}, []);
 
-
-
 	// Prefill the form when modal opens
 	useEffect(() => {
 		if (handleAttendanceisSuccess) {
-			Alert.alert('Success', handleAttendancemessage, [
+			showAlert('Success', handleAttendancemessage, [
 				{
 					text: 'OK',
 					onPress: () => {
@@ -51,11 +77,9 @@ const BarCodeCamera = ({ navigation }: any) => {
 		}
 	}, [handleAttendanceisSuccess]);
 
-
-
 	useEffect(() => {
 		if (handleAttendanceisError) {
-			Alert.alert('Error', handleAttendancemessage, [
+			showAlert('Error', handleAttendancemessage, [
 				{ text: 'OK' },
 			]);
 			dispatch(reset());
@@ -72,25 +96,12 @@ const BarCodeCamera = ({ navigation }: any) => {
 		}
 	}, [token, userId]);
 
-
-	useEffect(() => {
-		const fetchUser = async () => {
-			const user: any = await getUserInfo();
-			if (user) {
-
-				// Fetch attendance status
-				const response = await fetch(`${baseUrl}/api/v1/attendance/${userId}`, {
-					headers: { Authorization: `Bearer ${token}` },
-				});
-				const status = await response.json();
-				setHasClockedIn(status?.hasClockedIn);
-			}
-		};
-		fetchUser();
-	}, []);
-
 	useEffect(() => {
 		const requestPermission = async () => {
+			if (Platform.OS === 'web') {
+				setHasPermission(true);
+				return;
+			}
 			const { status } = await Camera.requestCameraPermissionsAsync();
 			setHasPermission(status === 'granted');
 		};
@@ -103,12 +114,53 @@ const BarCodeCamera = ({ navigation }: any) => {
 	};
 
 	const handleClockAction = async () => {
-		dispatch(handleAttendance(input));
+		const payload = Platform.OS === 'web' 
+			? { token: manualToken, userId } 
+			: input;
+		dispatch(handleAttendance(payload));
 	};
 
 	const handleClose = () => {
 		navigation.goBack();
 	};
+
+	if (Platform.OS === 'web') {
+		return (
+			<View style={styles.webContainer}>
+				<TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+					<BlackX />
+				</TouchableOpacity>
+				<View style={styles.webForm}>
+					<Text style={styles.webTitle}>
+						{hasClockedIn ? 'Clock Out' : 'Clock In'} (Web)
+					</Text>
+					<Text style={styles.webSubtitle}>
+						Enter the QR code token displayed on the Admin Dashboard to clock {hasClockedIn ? 'out' : 'in'}.
+					</Text>
+					<TextInput
+						style={styles.webInput}
+						placeholder="Paste QR Code Token here..."
+						value={manualToken}
+						onChangeText={(text) => {
+							setManualToken(text);
+							setToken(text);
+						}}
+					/>
+					<TouchableOpacity 
+						style={[styles.buttonContainer, { marginTop: 24, width: '100%' }]} 
+						onPress={handleClockAction}
+						disabled={!manualToken || handleAttendanceisLoading}
+					>
+						{handleAttendanceisLoading ? (
+							<ActivityIndicator color={colors.white} size="small" />
+						) : (
+							<Text style={styles.text}>{hasClockedIn ? 'Clock Out' : 'Clock In'}</Text>
+						)}
+					</TouchableOpacity>
+				</View>
+			</View>
+		);
+	}
 
 	// -- UI for permissions or camera issues --
 	if (hasPermission === null) {
@@ -178,7 +230,6 @@ const BarCodeCamera = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-
 	closeButton: {
 		position: 'absolute',
 		width: 32,
@@ -223,7 +274,6 @@ const styles = StyleSheet.create({
 		fontSize: 16,
 		fontWeight: '500',
 	},
-
 	headerContainer: {
 		flex: 1,
 		backgroundColor: '#fff',
@@ -262,8 +312,6 @@ const styles = StyleSheet.create({
 		fontSize: 16,
 		fontWeight: '600',
 	},
-
-
 	permissionSubtitle: {
 		fontSize: 15,
 		color: '#4b5563',
@@ -271,8 +319,6 @@ const styles = StyleSheet.create({
 		marginTop: 8,
 		marginBottom: 20,
 	},
-
-
 	scanAgainButton: {
 		backgroundColor: '#e5e7eb',
 		alignSelf: 'center',
@@ -285,7 +331,44 @@ const styles = StyleSheet.create({
 		fontWeight: '500',
 		color: '#111827',
 	},
+	webContainer: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+		backgroundColor: '#fff',
+		paddingHorizontal: 24,
+		paddingTop: 80,
+	},
+	webForm: {
+		width: '100%',
+		maxWidth: 400,
+		alignItems: 'center',
+	},
+	webTitle: {
+		fontSize: 24,
+		fontWeight: '600',
+		color: colors.gray900,
+		marginBottom: 12,
+		textAlign: 'center',
+	},
+	webSubtitle: {
+		fontSize: 14,
+		color: colors.gray500,
+		textAlign: 'center',
+		marginBottom: 24,
+		lineHeight: 20,
+	},
+	webInput: {
+		width: '100%',
+		height: 48,
+		borderWidth: 1,
+		borderColor: '#d1d5db',
+		borderRadius: 8,
+		paddingHorizontal: 16,
+		fontSize: 16,
+		color: '#111827',
+		backgroundColor: '#f9fafb',
+	},
 });
 
 export default BarCodeCamera;
-
