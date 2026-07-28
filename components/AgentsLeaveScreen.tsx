@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         position: 'absolute',
         zIndex: 20,
-        bottom: 30,
+        bottom: 100,
         right: 20,
         elevation: 5,
         shadowColor: '#000',

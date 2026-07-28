@@ -8,7 +8,7 @@ import {
   useColorScheme, 
   ScrollView, 
   ActivityIndicator,
-  Alert,
+  Modal,
   Platform
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,7 +16,7 @@ import { useNavigation } from "@react-navigation/native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useAppDispatch, useAppSelector } from "@/hooks/hooks";
 import { createLeaveRequest } from "@/features/leave/leaveSlice";
-import { LeaveType } from "@/enums/leaveType.enum"; // Adjust path to your LeaveType enum/type
+import { LeaveType } from "@/enums/leaveType.enum";
 import Colors from "@/constants/Colors";
 import { BackIcon } from "@/assets/svg/BackIcon";
 import { colors } from "@/css/colorsIndex";
@@ -28,6 +28,14 @@ const LEAVE_TYPES = Object.values(LeaveType || {
   MATERNITY: "MATERNITY",
   PATERNITY: "PATERNITY",
 });
+
+interface FeedbackModalState {
+  visible: boolean;
+  type: "success" | "error" | "warning";
+  title: string;
+  message: string;
+  onConfirm?: () => void;
+}
 
 export default function CreateLeave() {
   const navigation = useNavigation();
@@ -45,13 +53,42 @@ export default function CreateLeave() {
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [reason, setReason] = useState<string>("");
 
-  // Date Picker visibility state (for Android/iOS)
+  // Date Picker visibility state
   const [showStartPicker, setShowStartPicker] = useState<boolean>(false);
   const [showEndPicker, setShowEndPicker] = useState<boolean>(false);
 
+  // Custom Feedback Modal State
+  const [modalState, setModalState] = useState<FeedbackModalState>({
+    visible: false,
+    type: "success",
+    title: "",
+    message: "",
+  });
+
+  const showAlert = (
+    type: "success" | "error" | "warning", 
+    title: string, 
+    message: string, 
+    onConfirm?: () => void
+  ) => {
+    setModalState({
+      visible: true,
+      type,
+      title,
+      message,
+      onConfirm,
+    });
+  };
+
+  const closeModal = () => {
+    const action = modalState.onConfirm;
+    setModalState((prev) => ({ ...prev, visible: false }));
+    if (action) action();
+  };
+
   const handleSubmit = async () => {
     if (startDate > endDate) {
-      Alert.alert("Invalid Dates", "End date cannot be earlier than start date.");
+      showAlert("warning", "Invalid Dates", "End date cannot be earlier than start date.");
       return;
     }
 
@@ -64,11 +101,18 @@ export default function CreateLeave() {
 
     try {
       await dispatch(createLeaveRequest(payload)).unwrap();
-      Alert.alert("Success", "Your leave request has been submitted!", [
-        { text: "OK", onPress: () => navigation.goBack() }
-      ]);
+      showAlert(
+        "success", 
+        "Request Submitted", 
+        "Your leave request has been sent for approval.", 
+        () => navigation.goBack()
+      );
     } catch (err: any) {
-      Alert.alert("Error", err?.message || "Failed to submit leave request.");
+      showAlert(
+        "error", 
+        "Submission Failed", 
+        err?.message || "Failed to submit leave request. Please try again."
+      );
     }
   };
 
@@ -85,6 +129,15 @@ export default function CreateLeave() {
   const subTextColor = isDark ? "#9CA3AF" : "#6B7280";
   const inputBg = isDark ? "#374151" : "#F9FAFB";
   const borderColor = isDark ? "#4B5563" : "#E5E7EB";
+
+  const getStatusColor = () => {
+    switch (modalState.type) {
+      case "success": return "#10B981";
+      case "error": return "#EF4444";
+      case "warning": return "#F59E0B";
+      default: return colors.accent_blue;
+    }
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: currentColors.background, paddingTop: insets.top + 10 }]}>
@@ -210,6 +263,47 @@ export default function CreateLeave() {
 
         </View>
       </ScrollView>
+
+      {/* Styled Response Modal */}
+      <Modal
+        visible={modalState.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: cardBg }]}>
+            
+            {/* Status Badge Icon */}
+            <View style={[styles.iconContainer, { backgroundColor: getStatusColor() + "15" }]}>
+              <View style={[styles.iconInner, { backgroundColor: getStatusColor() }]}>
+                <Text style={styles.iconSymbol}>
+                  {modalState.type === "success" ? "✓" : modalState.type === "error" ? "✕" : "!"}
+                </Text>
+              </View>
+            </View>
+
+            {/* Modal Text Content */}
+            <Text style={[styles.modalTitle, { color: textColor }]}>
+              {modalState.title}
+            </Text>
+            <Text style={[styles.modalMessage, { color: subTextColor }]}>
+              {modalState.message}
+            </Text>
+
+            {/* Action Button */}
+            <TouchableOpacity 
+              style={[styles.modalButton, { backgroundColor: getStatusColor() }]} 
+              onPress={closeModal}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.modalButtonText}>Done</Text>
+            </TouchableOpacity>
+
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -296,5 +390,69 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "700",
+  },
+
+  /* Modal Specific Styles */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  modalCard: {
+    width: "100%",
+    borderRadius: 24,
+    padding: 24,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  iconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  iconInner: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  iconSymbol: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "800",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  modalMessage: {
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  modalButton: {
+    width: "100%",
+    height: 48,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
   },
 });
