@@ -14,11 +14,18 @@ interface CalendarQueryParams {
   endDate?: string;
 }
 
+export interface AttendanceInput {
+  token: string;
+  userId: string;
+  userLat?: number;
+  userLng?: number;
+  deviceId: string;
+}
+
 // Attendance
-const handleAttendance = async (  input: any) => {
-  
+const handleAttendance = async (input: AttendanceInput) => {
   const config = await getConfig(); 
-  const { data } = await axios.post(`${baseUrl}/api/v1/attendance/`,input ,config); 
+  const { data } = await axios.post(`${baseUrl}/api/v1/attendance/`, input, config); 
   return data;
 };
 const getLoggedInUserAttendance = async (id: string) => {

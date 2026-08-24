@@ -16,7 +16,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.attendly",
       "infoPlist": {
-        "NSFaceIDUsageDescription": "This app uses Face ID for secure and convenient login authentication."
+        "NSFaceIDUsageDescription": "This app uses Face ID for secure and convenient login authentication.",
+        "NSLocationWhenInUseUsageDescription": "Attendly Pro uses your location to verify that you are within the designated office premises when clocking in or out."
       }
     },
     "android": {
@@ -25,7 +26,11 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.attendly"
+      "package": "com.anonymous.attendly",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -34,6 +39,12 @@
         "expo-local-authentication",
         {
           "faceIDPermission": "This app uses Face ID for secure and convenient login authentication."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Attendly Pro uses your location to verify that you are within the designated office premises when clocking in or out."
         }
       ]
     ],

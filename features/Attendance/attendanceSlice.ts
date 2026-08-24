@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import attendanceService from './attendanceService';
+import attendanceService, { AttendanceInput } from './attendanceService';
 
 // Define the CalendarQueryParams type
 export type CalendarQueryParams = { 
@@ -90,10 +90,10 @@ export const getCalender = createAsyncThunk(
   }
 );
 
-// Thunk to get calendar data
+// Thunk to submit attendance check-in/out
 export const handleAttendance = createAsyncThunk(
   'attendance/handleAttendance',
-  async (data:any, thunkAPI) => {
+  async (data: AttendanceInput, thunkAPI) => {
     try {
       return await attendanceService.handleAttendance(data);
     } catch (error: any) {
