@@ -50,7 +50,7 @@ export const fetchMyLeaveRequests = createAsyncThunk(
       return resp.data.data
       
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch my leave requests');
+      return rejectWithValue(error.response?.data?.message || 'Sorry but it seems we are unable to get your leave requests, please check your network or try again later');
     }
   }
 );

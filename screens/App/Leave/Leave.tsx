@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, StyleSheet, useColorScheme } from 'react-native';
+import { View, StyleSheet, StatusBar, useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppSelector } from '@/hooks/hooks';
 import Colors from "@/constants/Colors";
 import { RoleEnum } from "@/enums/role.enum"; // Adjust import path
 import AgentsLeaveUI from '@/components/AgentsLeaveScreen';
 import AdminLeaveUI from '@/components/AdminLeaveUI';
+import { colors } from '@/css/colorsIndex';
 
 export default function LeaveScreen() {
     const colorScheme = useColorScheme() || 'light';
@@ -18,22 +19,26 @@ export default function LeaveScreen() {
     const isAgent = role === RoleEnum.AGENT;
 
     return (
-        <View 
-            style={[
-                styles.container, 
-                { 
-                    backgroundColor: currentColors.background,
-                    paddingTop: insets.top
-                }
-            ]}
-        >
-            {isAgent ? <AgentsLeaveUI /> : <AdminLeaveUI />}
+        <View style={[styles.container, { paddingTop: insets.top }]}>
+
+            <View
+                style={[
+                    styles.content,
+                    { backgroundColor: currentColors.background },
+                ]}
+            >
+                {isAgent ? <AgentsLeaveUI /> : <AdminLeaveUI />}
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
+        flex: 1,
+        backgroundColor: colors.accent_blue,
+    },
+    content: {
         flex: 1,
     },
 });

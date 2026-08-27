@@ -1,4 +1,5 @@
 import React, { JSX, useEffect } from 'react';
+import { StatusBar } from 'react-native';
 import { Provider } from 'react-redux';
 import { NavigationContainer } from '@react-navigation/native';
 import AppStack from './Navigation/AppStack';
@@ -11,6 +12,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { UserProvider } from './Context/UserContext';
 import { DateProvider } from './Context/DateProvider';
 import { PaperProvider } from 'react-native-paper';
+import { colors } from './css/colorsIndex';
 
 function AppContent() {
   const dispatch = useAppDispatch();
@@ -25,6 +27,11 @@ function AppContent() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <StatusBar
+          backgroundColor={colors.accent_blue}
+          barStyle="dark-content"
+          translucent
+      />
       <PaperProvider>
         <UserProvider>
           <DateProvider>

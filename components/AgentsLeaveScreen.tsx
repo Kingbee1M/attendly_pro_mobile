@@ -9,7 +9,9 @@ import {
     ActivityIndicator, 
     RefreshControl,
     TouchableOpacity,
-    ScrollView
+    ScrollView,
+    Pressable,
+    Animated
 } from "react-native";
 import { useDispatch, useSelector } from 'react-redux';
 import Colors from "@/constants/Colors";
@@ -18,6 +20,16 @@ import { fetchMyLeaveRequests } from "@/features/leave/leaveSlice";
 import { RootState, AppDispatch } from "@/utils/store";
 import { LeaveStatus } from "@/enums/leaveStatus.enum";
 import { PlusIcon } from '@/assets/svg/PlusIcon';
+
+// Visual illustration container for network issues
+const ConnectionErrorIllustration = ({ isDark }: { isDark: boolean }) => (
+    <View style={[styles.illustrationCircle, { backgroundColor: isDark ? '#2C1E21' : '#FEE2E2' }]}>
+        <View style={[styles.illustrationInnerCircle, { backgroundColor: isDark ? '#3D2529' : '#FCA5A5' }]}>
+            {/* SVG icon placeholder or fallback icon */}
+            <Text style={{ fontSize: 28 }}>⚡</Text>
+        </View>
+    </View>
+);
 
 const STATUS_FILTERS = [
     { label: 'All', value: 'ALL' },
@@ -49,7 +61,6 @@ export default function AgentsLeaveUI() {
         setRefreshing(false);
     }, [dispatch]);
 
-    // Client-side filtering via useMemo
     const filteredMyRequests = useMemo(() => {
         if (!myLeaveRequests) return [];
         if (selectedStatus === 'ALL') return myLeaveRequests;
@@ -123,9 +134,48 @@ export default function AgentsLeaveUI() {
                     <ActivityIndicator size="large" color="#2171FF" />
                 </View>
             ) : error ? (
-                <View style={styles.centerContainer}>
-                    <Text style={{ color: isDark ? colors.white : colors.gray900 }}>{error}</Text>
-                </View>
+                <ScrollView 
+                    contentContainerStyle={styles.errorScrollContainer}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={
+                        <RefreshControl 
+                            refreshing={refreshing} 
+                            onRefresh={onRefresh}
+                            colors={["#2171FF"]}
+                            tintColor="#2171FF"
+                        />
+                    }
+                >
+                    <View style={[styles.errorCard, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF' }]}>
+                        <ConnectionErrorIllustration isDark={isDark} />
+                        
+                        <View style={styles.badgeContainer}>
+                            <Text style={styles.badgeText}>NETWORK FAILURE</Text>
+                        </View>
+
+                        <Text style={[styles.errorTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                            Unable to load requests
+                        </Text>
+                        
+                        <Text style={[styles.errorMessage, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                            {typeof error === 'string' ? error : 'We hit a snag while fetching your leave history. Check your connection and try again.'}
+                        </Text>
+
+                        <Pressable 
+                            style={({ pressed }) => [
+                                styles.retryButton,
+                                { opacity: pressed ? 0.85 : 1.0, transform: [{ scale: pressed ? 0.98 : 1.0 }] }
+                            ]}
+                            onPress={() => dispatch(fetchMyLeaveRequests())}
+                        >
+                            <Text style={styles.retryButtonText}>Retry Request</Text>
+                        </Pressable>
+
+                        <Text style={[styles.pullHint, { color: isDark ? '#6B7280' : '#9CA3AF' }]}>
+                            Or pull down to refresh
+                        </Text>
+                    </View>
+                </ScrollView>
             ) : (
                 <FlatList
                     data={filteredMyRequests}
@@ -232,8 +282,90 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 20,
     },
+    errorScrollContainer: {
+        flexGrow: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 20,
+    },
+    errorCard: {
+        paddingVertical: 32,
+        paddingHorizontal: 24,
+        borderRadius: 20,
+        alignItems: 'center',
+        width: '100%',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 3,
+    },
+    illustrationCircle: {
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    illustrationInnerCircle: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    badgeContainer: {
+        backgroundColor: '#EF444415',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        marginBottom: 12,
+    },
+    badgeText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#EF4444',
+        letterSpacing: 0.5,
+    },
+    errorTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    errorMessage: {
+        fontSize: 14,
+        textAlign: 'center',
+        lineHeight: 20,
+        marginBottom: 24,
+        maxWidth: 280,
+    },
+    retryButton: {
+        backgroundColor: colors.accent_blue,
+        paddingVertical: 12,
+        width: '100%',
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: colors.accent_blue,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    retryButtonText: {
+        color: '#FFFFFF',
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    pullHint: {
+        fontSize: 12,
+        marginTop: 14,
+        fontWeight: '500',
+    },
     listContent: {
-        paddingBottom: 100, // Extra padding so cards aren't covered by FAB button
+        paddingBottom: 100,
     },
     card: {
         padding: 16,

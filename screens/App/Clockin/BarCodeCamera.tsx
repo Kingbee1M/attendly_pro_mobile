@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Camera, CameraView } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '@/css/colorsIndex';
 import { getUserInfo } from '@/hooks/config';
@@ -31,32 +32,44 @@ import {
   requestLocationPermission,
   LocationError,
 } from '@/utils/locationService';
+import { RootState } from '@/utils/store';
+import { useCurrentDate } from '@/Context/DateProvider';
 
 const BarCodeCamera = ({ navigation }: any) => {
   const dispatch = useAppDispatch();
+  const insets = useSafeAreaInsets();
 
   // ---------------------------------------------------------
-  // ATTENDANCE STATE
+  // ATTENDANCE STATE (REDUX DERIVED)
   // ---------------------------------------------------------
-
   const {
+    data,
     handleAttendanceisError,
     handleAttendanceisSuccess,
     handleAttendanceisLoading,
     handleAttendancemessage,
-  }: any = useAppSelector((state) => state.attendance);
+  } = useAppSelector((state: RootState) => state.attendance);
+
+  const day = !data?.data?.data?.data ? [] : data?.data?.data?.data;
+  const entry = day[0];
+  const clockIn = entry?.clockIn;
+  const clockOut = entry?.clockOut;
+
+  // Primary dynamic boolean used across UI
+  const isClockedIn = Boolean(clockIn && !clockOut);
+
+  // Dynamic text helpers
+  const actionLabel = isClockedIn ? 'Clock Out' : 'Clock In';
+  const actionProgressLabel = isClockedIn ? 'Clocking Out' : 'Clocking In';
 
   // ---------------------------------------------------------
   // USER / ATTENDANCE STATE
   // ---------------------------------------------------------
-
   const [userId, setUserId] = useState<string | null>(null);
-  const [hasClockedIn, setHasClockedIn] = useState(false);
 
   // ---------------------------------------------------------
   // QR / TOKEN STATE
   // ---------------------------------------------------------
-
   const [scanned, setScanned] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [manualToken, setManualToken] = useState('');
@@ -64,22 +77,16 @@ const BarCodeCamera = ({ navigation }: any) => {
   // ---------------------------------------------------------
   // DEVICE / LOCATION STATE
   // ---------------------------------------------------------
-
   const [deviceId, setDeviceId] = useState('');
-  const [hasCameraPermission, setHasCameraPermission] =
-    useState<boolean | null>(null);
-  const [hasLocationPermission, setHasLocationPermission] =
-    useState<boolean | null>(null);
-
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [hasLocationPermission, setHasLocationPermission] = useState<boolean | null>(null);
   const [isAcquiringLocation, setIsAcquiringLocation] = useState(false);
   const [actionStepMessage, setActionStepMessage] = useState('');
 
   // ---------------------------------------------------------
   // MODAL STATE
   // ---------------------------------------------------------
-
   const [modalVisible, setModalVisible] = useState(false);
-
   const [modalConfig, setModalConfig] = useState<{
     type: 'success' | 'error';
     title: string;
@@ -91,161 +98,77 @@ const BarCodeCamera = ({ navigation }: any) => {
     message: '',
   });
 
-  // ---------------------------------------------------------
-  // MODAL HELPER
-  // ---------------------------------------------------------
-
   const triggerModal = (
     type: 'success' | 'error',
     title: string,
     message: string,
     onConfirm?: () => void,
   ) => {
-    setModalConfig({
-      type,
-      title,
-      message,
-      onConfirm,
-    });
-
+    setModalConfig({ type, title, message, onConfirm });
     setModalVisible(true);
   };
 
   const handleModalDismiss = () => {
     setModalVisible(false);
-
     if (modalConfig.onConfirm) {
       modalConfig.onConfirm();
     }
   };
 
   // ---------------------------------------------------------
-  // INITIALIZE USER + DEVICE
+  // INITIALIZE USER + DEVICE + REDUX DATA
   // ---------------------------------------------------------
-
   useEffect(() => {
     const initData = async () => {
       try {
-        // Get hardware/device ID
         const generatedDeviceId = await getOrGenerateDeviceId();
-
         setDeviceId(generatedDeviceId);
 
-        console.log(
-          '📱 [BarCodeCamera] Device ID:',
-          generatedDeviceId,
-        );
-
-        // Get logged-in user
         const user: any = await getUserInfo();
-
-        if (!user) {
-          console.warn('[BarCodeCamera] No logged-in user found.');
-          return;
-        }
+        if (!user) return;
 
         const id = user?.data?.user?.id;
-        const jwtToken = user?.token;
-
-        if (!id) {
-          console.warn('[BarCodeCamera] User ID not found.');
-          return;
-        }
+        if (!id) return;
 
         setUserId(id);
 
-        // Fetch current attendance status
-        if (jwtToken) {
-          try {
-            const response = await fetch(
-              `${baseUrl}/api/v1/attendance/${id}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${jwtToken}`,
-                },
-              },
-            );
-
-            const status = await response.json();
-
-            setHasClockedIn(Boolean(status?.hasClockedIn));
-          } catch (error) {
-            console.error(
-              '[BarCodeCamera] Error fetching attendance status:',
-              error,
-            );
-          }
-        }
+        // Populate Redux attendance state directly
+        dispatch(getLoggedInUserAttendance(id));
       } catch (error) {
-        console.error(
-          '[BarCodeCamera] Initialization error:',
-          error,
-        );
+        console.error('[BarCodeCamera] Initialization error:', error);
       }
     };
 
     initData();
-  }, []);
+  }, [dispatch]);
 
   // ---------------------------------------------------------
   // REQUEST CAMERA + LOCATION PERMISSIONS
   // ---------------------------------------------------------
-
   useEffect(() => {
     const requestPermissions = async () => {
       try {
-        // Web does not use the native camera/location permission flow.
         if (Platform.OS === 'web') {
           setHasCameraPermission(true);
           setHasLocationPermission(true);
           return;
         }
 
-        // Camera permission
-        const { status: cameraStatus } =
-          await Camera.requestCameraPermissionsAsync();
-
+        const { status: cameraStatus } = await Camera.requestCameraPermissionsAsync();
         const cameraGranted = cameraStatus === 'granted';
-
         setHasCameraPermission(cameraGranted);
 
-        // Location permission
-        const locationGranted =
-          await requestLocationPermission();
-
+        const locationGranted = await requestLocationPermission();
         setHasLocationPermission(locationGranted);
 
-        // Pre-fetch location so we know permission/location works.
         if (locationGranted) {
           try {
-            const coords = await getCurrentCoordinates();
-
-            console.log(
-              '📍 [BarCodeCamera Mount] Current Position:',
-            );
-
-            console.log(
-              'Latitude:',
-              coords.userLat,
-            );
-
-            console.log(
-              'Longitude:',
-              coords.userLng,
-            );
+            await getCurrentCoordinates();
           } catch (error) {
-            console.warn(
-              '[BarCodeCamera] Could not pre-fetch coordinates:',
-              error,
-            );
+            console.warn('[BarCodeCamera] Could not pre-fetch coordinates:', error);
           }
         }
       } catch (error) {
-        console.error(
-          '[BarCodeCamera] Permission error:',
-          error,
-        );
-
         setHasCameraPermission(false);
         setHasLocationPermission(false);
       }
@@ -257,25 +180,20 @@ const BarCodeCamera = ({ navigation }: any) => {
   // ---------------------------------------------------------
   // ATTENDANCE SUCCESS
   // ---------------------------------------------------------
-
   useEffect(() => {
-    if (!handleAttendanceisSuccess) {
-      return;
-    }
+    if (!handleAttendanceisSuccess) return;
 
     setIsAcquiringLocation(false);
     setActionStepMessage('');
 
     triggerModal(
       'success',
-      'Attendance Recorded',
-      handleAttendancemessage ||
-        'Attendance was successfully recorded.',
+      `${actionLabel} Recorded`,
+      handleAttendancemessage || `${actionLabel} was successfully recorded.`,
       () => {
         if (userId) {
           dispatch(getLoggedInUserAttendance(userId));
         }
-
         navigation.goBack();
       },
     );
@@ -287,70 +205,41 @@ const BarCodeCamera = ({ navigation }: any) => {
     userId,
     dispatch,
     navigation,
+    actionLabel,
   ]);
 
   // ---------------------------------------------------------
   // ATTENDANCE ERROR
   // ---------------------------------------------------------
-
   useEffect(() => {
-    if (!handleAttendanceisError) {
-      return;
-    }
+    if (!handleAttendanceisError) return;
 
     setIsAcquiringLocation(false);
     setActionStepMessage('');
 
     triggerModal(
       'error',
-      'Attendance Failed',
-      handleAttendancemessage ||
-        'Failed to save attendance record. Please try again.',
+      `${actionLabel} Failed`,
+      handleAttendancemessage || `Failed to save record. Please try again.`,
     );
 
     dispatch(reset());
-  }, [
-    handleAttendanceisError,
-    handleAttendancemessage,
-    dispatch,
-  ]);
+  }, [handleAttendanceisError, handleAttendancemessage, dispatch, actionLabel]);
 
   // ---------------------------------------------------------
   // BARCODE SCANNED
   // ---------------------------------------------------------
-
-  const handleBarcodeScanned = ({
-    data,
-  }: {
-    type: string;
-    data: string;
-  }) => {
-    if (!data) {
-      return;
-    }
-
-    console.log(
-      '📷 [BarCodeCamera] QR Code Scanned:',
-      data,
-    );
-
+  const handleBarcodeScanned = ({ data }: { type: string; data: string }) => {
+    if (!data) return;
     setScanned(true);
     setToken(data);
   };
 
   // ---------------------------------------------------------
-  // CLOCK IN / CLOCK OUT
+  // CLOCK IN / CLOCK OUT ACTION
   // ---------------------------------------------------------
-
   const handleClockAction = async () => {
-    const activeToken =
-      Platform.OS === 'web'
-        ? manualToken.trim()
-        : token?.trim();
-
-    // ---------------------------------------------
-    // Validate token
-    // ---------------------------------------------
+    const activeToken = Platform.OS === 'web' ? manualToken.trim() : token?.trim();
 
     if (!activeToken) {
       triggerModal(
@@ -358,13 +247,8 @@ const BarCodeCamera = ({ navigation }: any) => {
         'Missing QR Code',
         'Please scan a valid QR code or enter the QR code token.',
       );
-
       return;
     }
-
-    // ---------------------------------------------
-    // Validate user
-    // ---------------------------------------------
 
     if (!userId) {
       triggerModal(
@@ -372,55 +256,22 @@ const BarCodeCamera = ({ navigation }: any) => {
         'User Error',
         'Unable to retrieve your user information. Please log in again.',
       );
-
       return;
     }
 
     try {
       setIsAcquiringLocation(true);
-
-      // ---------------------------------------------
-      // DEVICE ID
-      // ---------------------------------------------
-
-      setActionStepMessage(
-        'Verifying device...',
-      );
+      setActionStepMessage('Verifying device...');
 
       let currentDeviceId = deviceId;
-
       if (!currentDeviceId) {
-        currentDeviceId =
-          await getOrGenerateDeviceId();
-
+        currentDeviceId = await getOrGenerateDeviceId();
         setDeviceId(currentDeviceId);
       }
 
-      console.log(
-        '📱 [BarCodeCamera] Device ID:',
-        currentDeviceId,
-      );
-
-      // ---------------------------------------------
-      // LOCATION
-      // ---------------------------------------------
-
-      setActionStepMessage(
-        'Acquiring GPS location...',
-      );
-
+      setActionStepMessage('Acquiring GPS location...');
       let userLat: number | undefined;
       let userLng: number | undefined;
-
-      /*
-       * Native:
-       * Get the real GPS coordinates.
-       *
-       * Web:
-       * We attempt it as well, but if your backend does
-       * not require GPS for web attendance, you can
-       * change this section later.
-       */
 
       if (Platform.OS !== 'web') {
         if (!hasLocationPermission) {
@@ -429,59 +280,20 @@ const BarCodeCamera = ({ navigation }: any) => {
             'PERMISSION_DENIED',
           );
         }
-
         const coords = await getCurrentCoordinates();
-
         userLat = coords.userLat;
         userLng = coords.userLng;
-
-        console.log(
-          '📍 [BarCodeCamera] Current Coordinates:',
-        );
-
-        console.log(
-          'Latitude:',
-          userLat,
-        );
-
-        console.log(
-          'Longitude:',
-          userLng,
-        );
       } else {
-        /*
-         * On web, attempt to get location as well.
-         * If your web implementation doesn't support
-         * locationService, this can be removed.
-         */
         try {
           const coords = await getCurrentCoordinates();
-
           userLat = coords.userLat;
           userLng = coords.userLng;
-
-          console.log(
-            '🌐 [BarCodeCamera] Web Coordinates:',
-            {
-              userLat,
-              userLng,
-            },
-          );
         } catch (locationError) {
-          console.warn(
-            '[BarCodeCamera] Web location unavailable:',
-            locationError,
-          );
+          console.warn('[BarCodeCamera] Web location unavailable:', locationError);
         }
       }
 
-      // ---------------------------------------------
-      // SUBMIT ATTENDANCE
-      // ---------------------------------------------
-
-      setActionStepMessage(
-        'Submitting attendance...',
-      );
+      setActionStepMessage(`Submitting ${actionProgressLabel.toLowerCase()}...`);
 
       const payload: {
         token: string;
@@ -495,28 +307,13 @@ const BarCodeCamera = ({ navigation }: any) => {
         deviceId: currentDeviceId,
       };
 
-      // Only include coordinates if we successfully
-      // acquired them.
-      if (
-        typeof userLat === 'number' &&
-        typeof userLng === 'number'
-      ) {
+      if (typeof userLat === 'number' && typeof userLng === 'number') {
         payload.userLat = userLat;
         payload.userLng = userLng;
       }
 
-      console.log(
-        '📦 [BarCodeCamera] Clock-In Payload:',
-        JSON.stringify(payload, null, 2),
-      );
-
       dispatch(handleAttendance(payload));
     } catch (error: any) {
-      console.error(
-        '[BarCodeCamera] Clock action failed:',
-        error,
-      );
-
       setIsAcquiringLocation(false);
       setActionStepMessage('');
 
@@ -525,8 +322,7 @@ const BarCodeCamera = ({ navigation }: any) => {
           triggerModal(
             'error',
             'Location Permission Required',
-            error.message ||
-              'Please enable location permission to verify your attendance.',
+            error.message || 'Please enable location permission to verify your attendance.',
             () => {
               if (Platform.OS !== 'web') {
                 Linking.openSettings();
@@ -537,48 +333,33 @@ const BarCodeCamera = ({ navigation }: any) => {
           triggerModal(
             'error',
             'Location Error',
-            error.message ||
-              'Unable to determine your current location.',
+            error.message || 'Unable to determine your current location.',
           );
         }
-
         return;
       }
 
       triggerModal(
         'error',
-        'Clock-In Error',
-        error?.message ||
-          'An unexpected error occurred while processing your attendance.',
+        `${actionLabel} Error`,
+        error?.message || 'An unexpected error occurred while processing your attendance.',
       );
     }
   };
 
-  // ---------------------------------------------------------
-  // CLOSE
-  // ---------------------------------------------------------
-
-  const handleClose = () => {
-    navigation.goBack();
-  };
-
-  // ---------------------------------------------------------
-  // RESET SCAN
-  // ---------------------------------------------------------
+  const handleClose = () => navigation.goBack();
 
   const handleRescan = () => {
-    if (isSubmitting) {
-      return;
-    }
-
+    if (isSubmitting) return;
     setScanned(false);
     setToken(null);
   };
 
+  const isSubmitting = handleAttendanceisLoading || isAcquiringLocation;
+
   // ---------------------------------------------------------
   // STATUS MODAL
   // ---------------------------------------------------------
-
   const renderStatusModal = () => (
     <Modal
       transparent
@@ -591,9 +372,7 @@ const BarCodeCamera = ({ navigation }: any) => {
           <View
             style={[
               styles.modalIconBg,
-              modalConfig.type === 'success'
-                ? styles.iconBgSuccess
-                : styles.iconBgError,
+              modalConfig.type === 'success' ? styles.iconBgSuccess : styles.iconBgError,
             ]}
           >
             <Ionicons
@@ -603,36 +382,23 @@ const BarCodeCamera = ({ navigation }: any) => {
                   : 'alert-circle-outline'
               }
               size={36}
-              color={
-                modalConfig.type === 'success'
-                  ? '#16a34a'
-                  : '#dc2626'
-              }
+              color={modalConfig.type === 'success' ? '#16a34a' : '#dc2626'}
             />
           </View>
 
-          <Text style={styles.modalTitle}>
-            {modalConfig.title}
-          </Text>
-
-          <Text style={styles.modalMessage}>
-            {modalConfig.message}
-          </Text>
+          <Text style={styles.modalTitle}>{modalConfig.title}</Text>
+          <Text style={styles.modalMessage}>{modalConfig.message}</Text>
 
           <TouchableOpacity
             style={[
               styles.modalButton,
-              modalConfig.type === 'success'
-                ? styles.btnSuccess
-                : styles.btnError,
+              modalConfig.type === 'success' ? styles.btnSuccess : styles.btnError,
             ]}
             onPress={handleModalDismiss}
             activeOpacity={0.8}
           >
             <Text style={styles.modalButtonText}>
-              {modalConfig.type === 'success'
-                ? 'Done'
-                : 'Try Again'}
+              {modalConfig.type === 'success' ? 'Done' : 'Try Again'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -641,55 +407,26 @@ const BarCodeCamera = ({ navigation }: any) => {
   );
 
   // ---------------------------------------------------------
-  // SUBMITTING STATE
-  // ---------------------------------------------------------
-
-  const isSubmitting =
-    handleAttendanceisLoading ||
-    isAcquiringLocation;
-
-  // ---------------------------------------------------------
   // WEB VIEW
   // ---------------------------------------------------------
-
   if (Platform.OS === 'web') {
     return (
       <View style={styles.webContainer}>
         {renderStatusModal()}
 
-        <TouchableOpacity
-          style={styles.closeButtonWeb}
-          onPress={handleClose}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="close"
-            size={20}
-            color="#374151"
-          />
+        <TouchableOpacity style={styles.closeButtonWeb} onPress={handleClose} activeOpacity={0.7}>
+          <Ionicons name="close" size={20} color="#374151" />
         </TouchableOpacity>
 
         <View style={styles.webCard}>
           <View style={styles.iconHeader}>
-            <Ionicons
-              name="qr-code-outline"
-              size={32}
-              color={colors.accent_blue}
-            />
+            <Ionicons name="qr-code-outline" size={32} color={colors.accent_blue} />
           </View>
 
-          <Text style={styles.webTitle}>
-            {hasClockedIn
-              ? 'Clock Out'
-              : 'Clock In'}
-          </Text>
+          <Text style={styles.webTitle}>{actionLabel}</Text>
 
           <Text style={styles.webSubtitle}>
-            Enter the token from the dashboard to{' '}
-            {hasClockedIn
-              ? 'end your shift'
-              : 'record your attendance'}
-            .
+            Enter the token from the dashboard to {isClockedIn ? 'end your shift' : 'record your attendance'}.
           </Text>
 
           <TextInput
@@ -706,44 +443,24 @@ const BarCodeCamera = ({ navigation }: any) => {
 
           {actionStepMessage ? (
             <View style={styles.statusStepContainer}>
-              <ActivityIndicator
-                size="small"
-                color={colors.accent_blue}
-              />
-
-              <Text style={styles.statusStepText}>
-                {actionStepMessage}
-              </Text>
+              <ActivityIndicator size="small" color={colors.accent_blue} />
+              <Text style={styles.statusStepText}>{actionStepMessage}</Text>
             </View>
           ) : null}
 
           <TouchableOpacity
             style={[
               styles.primaryButton,
-              (!manualToken.trim() ||
-                isSubmitting) &&
-                styles.disabledButton,
+              (!manualToken.trim() || isSubmitting) && styles.disabledButton,
             ]}
             onPress={handleClockAction}
-            disabled={
-              !manualToken.trim() ||
-              isSubmitting
-            }
+            disabled={!manualToken.trim() || isSubmitting}
             activeOpacity={0.8}
           >
             {isSubmitting ? (
-              <ActivityIndicator
-                color={colors.white}
-                size="small"
-              />
+              <ActivityIndicator color={colors.white} size="small" />
             ) : (
-              <Text
-                style={styles.primaryButtonText}
-              >
-                {hasClockedIn
-                  ? 'Clock Out'
-                  : 'Clock In'}
-              </Text>
+              <Text style={styles.primaryButtonText}>{actionLabel}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -752,20 +469,12 @@ const BarCodeCamera = ({ navigation }: any) => {
   }
 
   // ---------------------------------------------------------
-  // CAMERA PERMISSION LOADING
+  // PERMISSION STATES
   // ---------------------------------------------------------
-
-  if (
-    hasCameraPermission === null ||
-    hasLocationPermission === null
-  ) {
+  if (hasCameraPermission === null || hasLocationPermission === null) {
     return (
       <View style={styles.permissionContainer}>
-        <ActivityIndicator
-          size="large"
-          color={colors.accent_blue}
-        />
-
+        <ActivityIndicator size="large" color={colors.accent_blue} />
         <Text style={styles.permissionText}>
           Requesting Camera & Location Permissions...
         </Text>
@@ -773,85 +482,43 @@ const BarCodeCamera = ({ navigation }: any) => {
     );
   }
 
-  // ---------------------------------------------------------
-  // CAMERA PERMISSION DENIED
-  // ---------------------------------------------------------
-
   if (!hasCameraPermission) {
     return (
       <View style={styles.permissionContainer}>
         <View style={styles.deniedIconBg}>
-          <Ionicons
-            name="camera-outline"
-            size={36}
-            color={colors.accent_blue}
-          />
+          <Ionicons name="camera-outline" size={36} color={colors.accent_blue} />
         </View>
-
-        <Text style={styles.permissionTitle}>
-          Camera Access Required
-        </Text>
-
+        <Text style={styles.permissionTitle}>Camera Access Required</Text>
         <Text style={styles.permissionText}>
-          We need access to your camera to scan
-          attendance QR codes at your work
-          location.
+          We need access to your camera to scan attendance QR codes at your work location.
         </Text>
-
         <TouchableOpacity
           style={styles.permissionButton}
-          onPress={() =>
-            Linking.openSettings()
-          }
+          onPress={() => Linking.openSettings()}
           activeOpacity={0.8}
         >
-          <Text
-            style={styles.permissionButtonText}
-          >
-            Grant Permission
-          </Text>
+          <Text style={styles.permissionButtonText}>Grant Permission</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  // ---------------------------------------------------------
-  // LOCATION PERMISSION DENIED
-  // ---------------------------------------------------------
-
   if (!hasLocationPermission) {
     return (
       <View style={styles.permissionContainer}>
         <View style={styles.deniedIconBg}>
-          <Ionicons
-            name="location-outline"
-            size={36}
-            color={colors.accent_blue}
-          />
+          <Ionicons name="location-outline" size={36} color={colors.accent_blue} />
         </View>
-
-        <Text style={styles.permissionTitle}>
-          Location Access Required
-        </Text>
-
+        <Text style={styles.permissionTitle}>Location Access Required</Text>
         <Text style={styles.permissionText}>
-          Your location is required to verify that
-          you are within the approved office
-          geofence before recording attendance.
+          Your location is required to verify that you are within the approved office geofence.
         </Text>
-
         <TouchableOpacity
           style={styles.permissionButton}
-          onPress={() =>
-            Linking.openSettings()
-          }
+          onPress={() => Linking.openSettings()}
           activeOpacity={0.8}
         >
-          <Text
-            style={styles.permissionButtonText}
-          >
-            Open Settings
-          </Text>
+          <Text style={styles.permissionButtonText}>Open Settings</Text>
         </TouchableOpacity>
       </View>
     );
@@ -860,20 +527,15 @@ const BarCodeCamera = ({ navigation }: any) => {
   // ---------------------------------------------------------
   // CAMERA / QR SCANNER
   // ---------------------------------------------------------
-
   return (
     <SafeAreaView style={styles.mainContainer}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar backgroundColor="#050505" barStyle="light-content" translucent={false} />
 
       {renderStatusModal()}
 
       <CameraView
         style={StyleSheet.absoluteFillObject}
-        onBarcodeScanned={
-          scanned
-            ? undefined
-            : handleBarcodeScanned
-        }
+        onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
         barcodeScannerSettings={{
           barcodeTypes: ['qr', 'pdf417'],
         }}
@@ -882,15 +544,8 @@ const BarCodeCamera = ({ navigation }: any) => {
           {/* TOP BAR */}
           <View style={styles.topBar}>
             <View>
-              <Text style={styles.headerTag}>
-                ATTENDANCE
-              </Text>
-
-              <Text style={styles.headerTitle}>
-                {hasClockedIn
-                  ? 'Clocking Out'
-                  : 'Clocking In'}
-              </Text>
+              <Text style={styles.headerTag}>ATTENDANCE</Text>
+              <Text style={styles.headerTitle}>{actionProgressLabel}</Text>
             </View>
 
             <TouchableOpacity
@@ -898,61 +553,20 @@ const BarCodeCamera = ({ navigation }: any) => {
               onPress={handleClose}
               activeOpacity={0.8}
             >
-              <Ionicons
-                name="close"
-                size={22}
-                color="#1f2937"
-              />
+              <Ionicons name="close" size={22} color="#1f2937" />
             </TouchableOpacity>
           </View>
 
           {/* SCANNER FRAME */}
-          <View
-            style={
-              styles.scannerFrameContainer
-            }
-          >
-            <View
-              style={[
-                styles.scannerFrame,
-                scanned &&
-                  styles.scannerFrameSuccess,
-              ]}
-            >
-              <View
-                style={[
-                  styles.corner,
-                  styles.topLeft,
-                ]}
-              />
-
-              <View
-                style={[
-                  styles.corner,
-                  styles.topRight,
-                ]}
-              />
-
-              <View
-                style={[
-                  styles.corner,
-                  styles.bottomLeft,
-                ]}
-              />
-
-              <View
-                style={[
-                  styles.corner,
-                  styles.bottomRight,
-                ]}
-              />
+          <View style={styles.scannerFrameContainer}>
+            <View style={[styles.scannerFrame, scanned && styles.scannerFrameSuccess]}>
+              <View style={[styles.corner, styles.topLeft]} />
+              <View style={[styles.corner, styles.topRight]} />
+              <View style={[styles.corner, styles.bottomLeft]} />
+              <View style={[styles.corner, styles.bottomRight]} />
 
               {!scanned && (
-                <Text
-                  style={
-                    styles.scanInstruction
-                  }
-                >
+                <Text style={styles.scanInstruction}>
                   Align QR code inside frame
                 </Text>
               )}
@@ -960,179 +574,76 @@ const BarCodeCamera = ({ navigation }: any) => {
           </View>
 
           {/* BOTTOM SECTION */}
-          <View style={styles.bottomSection}>
+          <View
+            style={[
+              styles.bottomSection,
+              {
+                paddingBottom:
+                  Platform.OS === 'android'
+                    ? Math.max(insets.bottom, 48) + 12
+                    : Math.max(insets.bottom, 18),
+              },
+            ]}
+          >
             {scanned ? (
               <View style={styles.resultCard}>
-                {/* SCANNED BADGE */}
                 <View style={styles.successBadge}>
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={20}
-                    color="#16a34a"
-                  />
-
-                  <Text
-                    style={
-                      styles.successBadgeText
-                    }
-                  >
-                    Code Scanned
-                  </Text>
+                  <Ionicons name="checkmark-circle" size={20} color="#16a34a" />
+                  <Text style={styles.successBadgeText}>Code Scanned</Text>
                 </View>
 
-                <Text style={styles.cardTitle}>
-                  {hasClockedIn
-                    ? 'Ready to Clock Out'
-                    : 'Ready to Clock In'}
+                <Text style={styles.cardTitle}>Ready to {actionLabel}</Text>
+
+                <Text style={styles.cardSubtitle}>
+                  Your device ID and GPS location will be verified against the office geofence before your attendance is recorded.
                 </Text>
 
-                <Text
-                  style={styles.cardSubtitle}
-                >
-                  Your device ID and GPS
-                  location will be verified
-                  against the office geofence
-                  before your attendance is
-                  recorded.
-                </Text>
-
-                {/* LOCATION / DEVICE STATUS */}
                 {actionStepMessage ? (
-                  <View
-                    style={
-                      styles.statusStepContainer
-                    }
-                  >
-                    <ActivityIndicator
-                      size="small"
-                      color={
-                        colors.accent_blue
-                      }
-                    />
-
-                    <Text
-                      style={
-                        styles.statusStepText
-                      }
-                    >
-                      {actionStepMessage}
-                    </Text>
+                  <View style={styles.statusStepContainer}>
+                    <ActivityIndicator size="small" color={colors.accent_blue} />
+                    <Text style={styles.statusStepText}>{actionStepMessage}</Text>
                   </View>
                 ) : (
-                  <View
-                    style={
-                      styles.verificationInfo
-                    }
-                  >
-                    <View
-                      style={
-                        styles.verificationRow
-                      }
-                    >
-                      <Ionicons
-                        name="phone-portrait-outline"
-                        size={17}
-                        color="#6b7280"
-                      />
-
-                      <Text
-                        style={
-                          styles.verificationText
-                        }
-                      >
-                        Device verification
-                      </Text>
-
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={17}
-                        color="#16a34a"
-                      />
+                  <View style={styles.verificationInfo}>
+                    <View style={styles.verificationRow}>
+                      <Ionicons name="phone-portrait-outline" size={17} color="#6b7280" />
+                      <Text style={styles.verificationText}>Device verification</Text>
+                      <Ionicons name="checkmark-circle" size={17} color="#16a34a" />
                     </View>
 
-                    <View
-                      style={
-                        styles.verificationRow
-                      }
-                    >
-                      <Ionicons
-                        name="location-outline"
-                        size={17}
-                        color="#6b7280"
-                      />
-
-                      <Text
-                        style={
-                          styles.verificationText
-                        }
-                      >
-                        GPS verification
-                      </Text>
-
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={17}
-                        color="#16a34a"
-                      />
+                    <View style={styles.verificationRow}>
+                      <Ionicons name="location-outline" size={17} color="#6b7280" />
+                      <Text style={styles.verificationText}>GPS verification</Text>
+                      <Ionicons name="checkmark-circle" size={17} color="#16a34a" />
                     </View>
                   </View>
                 )}
 
-                {/* ACTION BUTTONS */}
-                <View
-                  style={styles.actionRow}
-                >
+                <View style={styles.actionRow}>
                   <TouchableOpacity
                     onPress={handleRescan}
-                    style={
-                      styles.secondaryButton
-                    }
+                    style={styles.secondaryButton}
                     activeOpacity={0.7}
                     disabled={isSubmitting}
                   >
-                    <Ionicons
-                      name="refresh-outline"
-                      size={18}
-                      color="#374151"
-                    />
-
-                    <Text
-                      style={
-                        styles.secondaryButtonText
-                      }
-                    >
-                      Rescan
-                    </Text>
+                    <Ionicons name="refresh-outline" size={18} color="#374151" />
+                    <Text style={styles.secondaryButtonText}>Rescan</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     style={[
                       styles.primaryButton,
                       { flex: 1 },
-                      isSubmitting &&
-                        styles.disabledButton,
+                      isSubmitting && styles.disabledButton,
                     ]}
-                    onPress={
-                      handleClockAction
-                    }
+                    onPress={handleClockAction}
                     disabled={isSubmitting}
                     activeOpacity={0.8}
                   >
                     {isSubmitting ? (
-                      <ActivityIndicator
-                        color={colors.white}
-                        size="small"
-                      />
+                      <ActivityIndicator color={colors.white} size="small" />
                     ) : (
-                      <Text
-                        style={
-                          styles.primaryButtonText
-                        }
-                      >
-                        {hasClockedIn
-                          ? 'Clock Out'
-                          : 'Clock In'}
-                      </Text>
+                      <Text style={styles.primaryButtonText}>{actionLabel}</Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -1145,12 +656,8 @@ const BarCodeCamera = ({ navigation }: any) => {
                   color="#ffffff"
                   style={{ opacity: 0.8 }}
                 />
-
-                <Text
-                  style={styles.hintText}
-                >
-                  Point your camera at the
-                  office QR code
+                <Text style={styles.hintText}>
+                  Point your camera at the office QR code
                 </Text>
               </View>
             )}
@@ -1313,7 +820,6 @@ const styles = StyleSheet.create({
 
   bottomSection: {
     paddingHorizontal: 16,
-    paddingBottom: Platform.OS === 'ios' ? 18 : 20,
   },
 
   hintContainer: {
