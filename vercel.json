@@ -1,5 +1,5 @@
 {
   "buildCommand": "pnpm expo export --platform web",
   "outputDirectory": "dist",
-  "installCommand": "pnpm install"
+  "installCommand": "corepack pnpm install --frozen-lockfile"
 }

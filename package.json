@@ -1,6 +1,7 @@
 {
   "name": "attendly",
   "version": "1.0.0",
+  "packageManager": "pnpm@10.15.1",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
