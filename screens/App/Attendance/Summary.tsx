@@ -105,7 +105,7 @@ const Summary: React.FC<SummaryProps> = ({ summarydata, summaryisLoading }) => {
 				</View>
 			) : (
 				data?.map((item, index) => (
-					<View style={styles.card} key={index}>
+					<View style={[styles.card, index >= 4 && styles.latestCard]} key={index}>
 						<View style={styles.card_title}>
 							<Text style={styles.text}>{item?.title}</Text>
 							{item?.icon}
@@ -149,6 +149,9 @@ const styles = StyleSheet.create({
 		borderRadius: 8,
 		marginBottom: 14,
 	},
+	latestCard: {
+		height: 150,
+	},
 	card_title: {
 		flexDirection: "row",
 		justifyContent: "space-between",
@@ -163,6 +166,7 @@ const styles = StyleSheet.create({
 		lineHeight: 18,
 		color: colors.gray400,
 		alignSelf: 'center',
+		flexShrink: 1,
 	},
 	days: {
 		fontFamily: 'Inter',
@@ -171,5 +175,6 @@ const styles = StyleSheet.create({
 		fontSize: 16,
 		lineHeight: 24,
 		color: colors.gray900,
+		flexShrink: 1,
 	},
 })
