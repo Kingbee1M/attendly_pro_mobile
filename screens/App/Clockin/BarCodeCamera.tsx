@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   Linking,
   Platform,
-  TextInput,
   View,
   Text,
   StyleSheet,
@@ -72,7 +71,6 @@ const BarCodeCamera = ({ navigation }: any) => {
   // ---------------------------------------------------------
   const [scanned, setScanned] = useState(false);
   const [token, setToken] = useState<string | null>(null);
-  const [manualToken, setManualToken] = useState('');
 
   // ---------------------------------------------------------
   // DEVICE / LOCATION STATE
@@ -239,7 +237,7 @@ const BarCodeCamera = ({ navigation }: any) => {
   // CLOCK IN / CLOCK OUT ACTION
   // ---------------------------------------------------------
   const handleClockAction = async () => {
-    const activeToken = Platform.OS === 'web' ? manualToken.trim() : token?.trim();
+    const activeToken = token?.trim();
 
     if (!activeToken) {
       triggerModal(
@@ -405,68 +403,6 @@ const BarCodeCamera = ({ navigation }: any) => {
       </View>
     </Modal>
   );
-
-  // ---------------------------------------------------------
-  // WEB VIEW
-  // ---------------------------------------------------------
-  if (Platform.OS === 'web') {
-    return (
-      <View style={styles.webContainer}>
-        {renderStatusModal()}
-
-        <TouchableOpacity style={styles.closeButtonWeb} onPress={handleClose} activeOpacity={0.7}>
-          <Ionicons name="close" size={20} color="#374151" />
-        </TouchableOpacity>
-
-        <View style={styles.webCard}>
-          <View style={styles.iconHeader}>
-            <Ionicons name="qr-code-outline" size={32} color={colors.accent_blue} />
-          </View>
-
-          <Text style={styles.webTitle}>{actionLabel}</Text>
-
-          <Text style={styles.webSubtitle}>
-            Enter the token from the dashboard to {isClockedIn ? 'end your shift' : 'record your attendance'}.
-          </Text>
-
-          <TextInput
-            style={styles.webInput}
-            placeholder="Paste QR token here..."
-            placeholderTextColor="#9ca3af"
-            value={manualToken}
-            onChangeText={(text) => {
-              setManualToken(text);
-              setToken(text);
-            }}
-            editable={!isSubmitting}
-          />
-
-          {actionStepMessage ? (
-            <View style={styles.statusStepContainer}>
-              <ActivityIndicator size="small" color={colors.accent_blue} />
-              <Text style={styles.statusStepText}>{actionStepMessage}</Text>
-            </View>
-          ) : null}
-
-          <TouchableOpacity
-            style={[
-              styles.primaryButton,
-              (!manualToken.trim() || isSubmitting) && styles.disabledButton,
-            ]}
-            onPress={handleClockAction}
-            disabled={!manualToken.trim() || isSubmitting}
-            activeOpacity={0.8}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color={colors.white} size="small" />
-            ) : (
-              <Text style={styles.primaryButtonText}>{actionLabel}</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
 
   // ---------------------------------------------------------
   // PERMISSION STATES
@@ -1242,136 +1178,6 @@ const styles = StyleSheet.create({
   },
 
   // =========================================================
-  // WEB
-  // =========================================================
-
-  webContainer: {
-    flex: 1,
-
-    justifyContent: 'center',
-    alignItems: 'center',
-
-    backgroundColor: '#f7f8fa',
-
-    paddingHorizontal: 24,
-  },
-
-  closeButtonWeb: {
-    position: 'absolute',
-
-    top: 24,
-    right: 24,
-
-    width: 40,
-    height: 40,
-
-    borderRadius: 20,
-
-    backgroundColor: '#ffffff',
-
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-
-    justifyContent: 'center',
-    alignItems: 'center',
-
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.06,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-
-  webCard: {
-    width: '100%',
-    maxWidth: 430,
-
-    backgroundColor: '#ffffff',
-
-    borderRadius: 24,
-
-    paddingHorizontal: 28,
-    paddingVertical: 30,
-
-    alignItems: 'center',
-
-    borderWidth: 1,
-    borderColor: '#eaecf0',
-
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.07,
-    shadowRadius: 20,
-    elevation: 5,
-  },
-
-  iconHeader: {
-    width: 68,
-    height: 68,
-
-    borderRadius: 34,
-
-    backgroundColor: '#eff6ff',
-
-    justifyContent: 'center',
-    alignItems: 'center',
-
-    marginBottom: 18,
-  },
-
-  webTitle: {
-    fontSize: 23,
-    fontWeight: '700',
-
-    color: '#111827',
-
-    textAlign: 'center',
-
-    marginBottom: 7,
-  },
-
-  webSubtitle: {
-    maxWidth: 350,
-
-    fontSize: 14,
-    lineHeight: 21,
-
-    color: '#6b7280',
-
-    textAlign: 'center',
-
-    marginBottom: 22,
-  },
-
-  webInput: {
-    width: '100%',
-    height: 50,
-
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-
-    borderRadius: 12,
-
-    paddingHorizontal: 15,
-
-    fontSize: 15,
-
-    color: '#111827',
-
-    backgroundColor: '#f9fafb',
-
-    marginBottom: 14,
-
-    outlineStyle: 'none',
-  } as any,
-
-  // =========================================================
   // LEGACY / FALLBACK STYLES
   // Keep these only if another part of the component uses them.
   // =========================================================
@@ -1503,10 +1309,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  webForm: {
-    width: '100%',
-    maxWidth: 430,
-
-    alignItems: 'center',
-  },
 });
