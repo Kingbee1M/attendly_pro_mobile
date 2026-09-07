@@ -104,26 +104,32 @@ const TabToggle: React.FC<AttendanceState> = ({ setMessages }: { setMessages: (m
 			dispatch(getLoggedInUserAttendance(id));
 		} else if (index === 1) {
 			// Calendar Tab
+			const currentDate = new Date();
+			const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+			const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 			dispatch(getCalender({
 				id: id,
 				page: 1,
 				limit: 50,
 				filterByDate: 'range',
-				startDate: '2025-05-01',
-				endDate: '2025-05-30',
+				startDate: startDate.toISOString().split('T')[0],
+				endDate: endDate.toISOString().split('T')[0],
 			}));
 		} else if (index === 2) {
 			// Summary Tab
+			const currentDate = new Date();
+			const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+			const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 			dispatch(getCalender({
 				id: id,
 				page: 1,
 				limit: 50,
 				filterByDate: 'range',
-				startDate: '2025-05-01',
-				endDate: '2025-05-30',
+				startDate: startDate.toISOString().split('T')[0],
+				endDate: endDate.toISOString().split('T')[0],
 			}));
 		}
-	}, [index, dispatch]);
+	}, [index, dispatch, id]);
 
 	useEffect(() => {
 		fetchDataForTab();
