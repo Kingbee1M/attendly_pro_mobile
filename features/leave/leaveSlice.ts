@@ -30,7 +30,7 @@ const initialState: LeaveState = {
 // --- Async Thunks ---
 
 export const fetchAllLeaveRequests = createAsyncThunk(
-  'leave/fetchAll',
+  '/leave/all',
   async (queryParameters: GetAllLeaveRequestsQuery | undefined, { rejectWithValue }) => {
     try {
       const resp = await leaveService.getAllLeaveRequests(queryParameters);
@@ -42,7 +42,7 @@ export const fetchAllLeaveRequests = createAsyncThunk(
 );
 
 export const fetchMyLeaveRequests = createAsyncThunk(
-  'leave/fetchMy',
+  '/leave/my',
   async (_, { rejectWithValue }) => {
     try {
       
@@ -56,7 +56,7 @@ export const fetchMyLeaveRequests = createAsyncThunk(
 );
 
 export const fetchLeaveRequestById = createAsyncThunk(
-  'leave/fetchById',
+  '/leave/fetchById',
   async (leaveId: string, { rejectWithValue }) => {
     try {
       const resp = await leaveService.getLeaveRequestById(leaveId);
@@ -68,7 +68,7 @@ export const fetchLeaveRequestById = createAsyncThunk(
 );
 
 export const createLeaveRequest = createAsyncThunk(
-  'leave/create',
+  '/leave',
   async (body: CreateLeaveRequestBody, { rejectWithValue }) => {
     try {
        const resp = await leaveService.createLeaveRequest(body);

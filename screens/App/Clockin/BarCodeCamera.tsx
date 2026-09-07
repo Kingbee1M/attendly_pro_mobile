@@ -534,7 +534,7 @@ const BarCodeCamera = ({ navigation }: any) => {
       {renderStatusModal()}
 
       <CameraView
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
         onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
         barcodeScannerSettings={{
           barcodeTypes: ['qr', 'pdf417'],

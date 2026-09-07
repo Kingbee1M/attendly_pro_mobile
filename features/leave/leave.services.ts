@@ -7,7 +7,7 @@ import {
   RejectLeaveRequestBody 
 } from '../../types';
 import { LeaveStatus } from "@/enums/leaveStatus.enum";
-const baseUrl = "https://disengage-shorten-voter.ngrok-free.dev/api/v1"
+const baseUrl = "https://uat-software.outcess.com:7000/api/v1"
 const api = axios.create({
   baseURL: baseUrl,
   headers: {

@@ -7,7 +7,7 @@ import CalendarMonth from '@/screens/App/Attendance/CalenderMonth';
 import Summary from '@/screens/App/Attendance/Summary';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View, Text, Alert, RefreshControl } from 'react-native';
-import { Tab, TabView } from '@rneui/themed';
+import { Tab } from '@rneui/themed';
 import ContextMenu from '../ContextMenu';
 import { tabItems } from '../data';
 import { RootState } from '@/utils/store';
@@ -190,45 +190,38 @@ const TabToggle: React.FC<AttendanceState> = ({ setMessages }: { setMessages: (m
 						/>
 					))}
 				</Tab>
+			</View>
+			<View style={styles.filterContainer}>
 				<ContextMenu setMonth={setMonth} />
 			</View>
 
 
 			<View style={styles.card_list_scroll_container}>
-				<TabView value={index} onChange={setIndex}>
-					<TabView.Item key={`tab-${index}`} style={{ width: '100%' }}>
-						<ScrollView
-							style={styles.card_list_scroll_container}
-							refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-						>
-							<AttendanceCard
-								selectedDateDetails={selectedDateDetails}
-								isLoading={!refreshing && isLoading}
-								topTime={false}
-							/>
-						</ScrollView>
-					</TabView.Item>
-					<TabView.Item key={`tab-${index}`} style={{ width: '100%' }}>
-						<ScrollView style={styles.card_list_scroll_container}
-							refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-						>
-							<CalendarMonth
-								id={id}
-								months={months}
-								calenderdata={calenderdata}
-								calenderisLoading={!refreshing && calenderisLoading} />
-						</ScrollView>
-					</TabView.Item>
-					<TabView.Item key={`tab-${index}`} style={{ width: '100%' }}>
-						<ScrollView style={styles.card_list_scroll_container}
-							refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-							<Summary
-								summarydata={calenderdata}
-								summaryisLoading={!refreshing && calenderisLoading}
-							/>
-						</ScrollView>
-					</TabView.Item>
-				</TabView>
+				<ScrollView
+					style={styles.activeTabScrollView}
+					contentContainerStyle={styles.activeTabContent}
+					refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh}/>}>
+					{index === 0 && (
+						<AttendanceCard
+							selectedDateDetails={selectedDateDetails}
+							isLoading={!refreshing && isLoading}
+							topTime={false}
+						/>
+					)}
+					{index === 1 && (
+						<CalendarMonth
+							id={id}
+							months={months}
+							calenderdata={calenderdata}
+							calenderisLoading={!refreshing && calenderisLoading}/>
+					)}
+					{index === 2 && (
+						<Summary
+							summarydata={calenderdata}
+							summaryisLoading={!refreshing && calenderisLoading}
+						/>
+					)}
+				</ScrollView>
 			</View>
 		</View >
 	);
@@ -282,9 +275,20 @@ const styles = StyleSheet.create({
 
 	card_list_scroll_container: {
 		paddingHorizontal: 10,
-		marginTop: 30,
+		marginTop: 20,
 		marginBottom: 0,
 		flex: 1
+	},
+	filterContainer: {
+		marginTop: 30,
+		paddingHorizontal: 20,
+	},
+	activeTabScrollView: {
+		flex: 1,
+	},
+	activeTabContent: {
+		paddingHorizontal: 10,
+		paddingBottom: 24,
 	},
 });
 

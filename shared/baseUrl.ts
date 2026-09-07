@@ -1,7 +1,7 @@
 // export const baseUrl = "https://uat-software.outcess.com:7000"; 
 
 // export const baseUrl = "https://disengage-shorten-voter.ngrok-free.dev"
-export const baseUrl = "https://uat-software.outcess.com:7000/api/v1"
+export const baseUrl = "https://uat-software.outcess.com:7000"
 
 type QueryParams = {
   path?: string; 

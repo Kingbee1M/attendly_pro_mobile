@@ -82,7 +82,7 @@ const AttendanceCard: React.FC<AttendanceCardProps> = ({ selectedDateDetails, is
 					{topTime &&
 						<View style={styles.time_container_main}>
 							{/* Render the formatted date */}
-							<Text>{selectedDateDetails?.date === "Invalid date" ? "" : moment(selectedDateDetails?.date).format('D-MMM-YYYY')}</Text>
+							<Text style={styles.dateText}>{selectedDateDetails?.date === "Invalid date" ? "" : moment(selectedDateDetails?.date).format('D-MMM-YYYY')}</Text>
 							{selectedDateDetails?.status && (
 								<View style={containerStyle}>
 									<Text style={textStyle}>{selectedDateDetails?.status}</Text>
@@ -135,9 +135,10 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		justifyContent: 'center',
 		alignItems: 'center',
+		flexShrink: 0,
+		minHeight: 24,
 		paddingVertical: 2,
-		paddingHorizontal: 12,
-		gap: 10,
+		paddingHorizontal: 10,
 		borderWidth: 1,
 		borderColor: colors.purple,
 		borderRadius: 4,
@@ -155,9 +156,10 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		justifyContent: 'center',
 		alignItems: 'center',
+		flexShrink: 0,
+		minHeight: 24,
 		paddingVertical: 2,
-		paddingHorizontal: 12,
-		gap: 10,
+		paddingHorizontal: 10,
 		borderWidth: 1,
 		borderColor: colors.orange,
 		borderRadius: 4,
@@ -213,9 +215,13 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		justifyContent: "space-between",
 		alignItems: "center",
+		gap: 12,
 		paddingBottom: 14,
 		borderBottomWidth: 1,
 		borderBottomColor: colors.gray300,
+	},
+	dateText: {
+		flexShrink: 1,
 	},
 	time_text: {
 		fontFamily: 'Inter',
@@ -229,9 +235,10 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		justifyContent: 'center',
 		alignItems: 'center',
+		flexShrink: 0,
+		minHeight: 24,
 		paddingVertical: 2,
-		paddingHorizontal: 12,
-		gap: 10,
+		paddingHorizontal: 10,
 		borderWidth: 1,
 		borderColor: colors.green,
 		borderRadius: 4,
@@ -249,9 +256,10 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		justifyContent: 'center',
 		alignItems: 'center',
+		flexShrink: 0,
+		minHeight: 24,
 		paddingVertical: 2,
-		paddingHorizontal: 12,
-		gap: 10,
+		paddingHorizontal: 10,
 		borderWidth: 1,
 		borderColor: colors.red,
 		borderRadius: 4,
@@ -268,9 +276,10 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		justifyContent: 'center',
 		alignItems: 'center',
+		flexShrink: 0,
+		minHeight: 24,
 		paddingVertical: 2,
-		paddingHorizontal: 12,
-		gap: 10,
+		paddingHorizontal: 10,
 		borderWidth: 1,
 		borderColor: colors.gray500,
 		borderRadius: 4,
