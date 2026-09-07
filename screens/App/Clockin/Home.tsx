@@ -107,6 +107,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
     <View style={styles.container}>
       <Headline navigation={navigation} user={logindata} profileIsLoading={isLoading} />
       <ScrollView
+        style={styles.scrollView}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.scrollViewContent}
@@ -173,7 +174,11 @@ export default Home;
 
 const styles = StyleSheet.create({
   scrollViewContent: {
+    flexGrow: 1,
     paddingBottom: Platform.OS === 'android' ? 200 : 100,
+  },
+  scrollView: {
+    flex: 1,
   },
   overviewText: {
     height: 20,
@@ -316,7 +321,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   container: {
-    flexGrow: 1,
+    flex: 1,
     paddingTop: Platform.OS === 'android' ? 40 : 55,
     backgroundColor: colors.background,
   },
