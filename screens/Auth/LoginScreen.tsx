@@ -230,6 +230,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       style={styles.container}
     >
       <ScrollView
+        style={styles.scrollView}
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.scrollViewContent}
         keyboardShouldPersistTaps="handled"
@@ -314,7 +315,11 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   scrollViewContent: {
+    flexGrow: 1,
     paddingBottom: 100,
+  },
+  scrollView: {
+    flex: 1,
   },
   button: {
     marginTop: 24,

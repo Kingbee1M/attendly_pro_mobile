@@ -142,6 +142,7 @@ const Profile: React.FC<ProfileProps> = ({ navigation }) => {
         <View style={styles.headerContainer}>
             <View style={styles.container}>
                 <ScrollView
+					style={styles.scrollView}
                     refreshControl={<RefreshControl
                         refreshing={!refreshing ? false : refreshing}
                         onRefresh={onRefresh} />}
@@ -400,10 +401,14 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     scrollViewContent: {
+        flexGrow: 1,
         paddingBottom: 100,
     },
+    scrollView: {
+        flex: 1,
+    },
     container: {
-        flexGrow: 1,
+        flex: 1,
         paddingTop: 10,
         backgroundColor: colors.background,
     },

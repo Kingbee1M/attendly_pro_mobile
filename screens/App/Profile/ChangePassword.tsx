@@ -65,6 +65,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
 			<Header text={'Change Password'} />
 			<View style={styles.container}>
 				<ScrollView
+					style={styles.scrollView}
 					contentInsetAdjustmentBehavior="automatic"
 					contentContainerStyle={[
 						styles.scrollViewContent,
@@ -148,10 +149,13 @@ const styles = StyleSheet.create({
 		marginTop: 36,
 	},
 	scrollViewContent: {
+		flexGrow: 1,
+	},
+	scrollView: {
 		flex: 1,
 	},
 	container: {
-		flexGrow: 1,
+		flex: 1,
 		paddingTop: 10,
 		backgroundColor: colors.background,
 	},

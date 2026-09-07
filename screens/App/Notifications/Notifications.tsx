@@ -90,6 +90,7 @@ const Notifications: React.FC<NotificationsProps> = ({ navigation }) => {
 			<Header text={'Notifications'} />
 			<View style={styles.container}>
 				<ScrollView
+					style={styles.scrollView}
 					refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
 					contentInsetAdjustmentBehavior="automatic"
 					contentContainerStyle={styles.scrollViewContent} 	>
@@ -110,10 +111,14 @@ const styles = StyleSheet.create({
 		flex: 1,
 	},
 	scrollViewContent: {
+		flexGrow: 1,
 		paddingBottom: 100,
 	},
+	scrollView: {
+		flex: 1,
+	},
 	container: {
-		flexGrow: 1,
+		flex: 1,
 		paddingTop: 10,
 		backgroundColor: colors.background,
 	}

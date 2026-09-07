@@ -176,7 +176,11 @@ export default function AdminCheckLeave() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollViewContent}
+      >
         
         {/* Status Indicator Banner */}
         <View style={[styles.statusBanner, { backgroundColor: statusTheme.bg, borderColor: statusTheme.border }]}>
@@ -331,6 +335,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
   },
   centered: {
     flex: 1,
